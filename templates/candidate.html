@@ -7,13 +7,26 @@
 
 <body>
 
-<h1>Candidate Ranking</h1>
+<div class="container">
 
-<textarea id="job" placeholder="Enter job description"></textarea>
+    <div class="form-card">
 
-<button onclick="rankCandidates()">Rank</button>
+        <h1>Candidate Ranking</h1>
 
-<div id="result"></div>
+        <textarea
+            id="job"
+            placeholder="Example: Python Flask Azure SQL">
+        </textarea>
+
+        <button onclick="rankCandidates()">
+            Rank Candidates
+        </button>
+
+        <div id="result"></div>
+
+    </div>
+
+</div>
 
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 

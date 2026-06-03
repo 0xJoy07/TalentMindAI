@@ -1,21 +1,42 @@
 function rankCandidates() {
 
+    const job = document.getElementById("job").value;
+
     fetch("/api/rank", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: {
+            "Content-Type": "application/json"
+        },
         body: JSON.stringify({
-            job: document.getElementById("job").value
+            job: job
         })
     })
 
     .then(res => res.json())
+
     .then(data => {
 
-        document.getElementById("result").innerHTML =
-            JSON.stringify(data, null, 2);
+        let output = "";
+
+        data.forEach(candidate => {
+
+            output += `
+            <div class="candidate-card">
+
+                <h3>${candidate.name}</h3>
+
+                <p class="score">
+                    Match Score: ${candidate.score}%
+                </p>
+
+            </div>
+            `;
+        });
+
+        document.getElementById("result").innerHTML = output;
+
     });
 }
-
 
 function getLearning() {
 
