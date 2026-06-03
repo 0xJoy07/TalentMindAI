@@ -147,3 +147,24 @@ Author
 Jiya Bhowmick
 
 BCA Student | UI/UX Designer | AI Enthusiast
+## Multi-Agent Architecture
+
+TalentMind AI is a workforce intelligence platform built using a multi-agent architecture. The system employs specialized AI agents that collaborate through a centralized workflow orchestrator to perform candidate discovery, learning recommendations, readiness assessment, and workforce analytics.
+
+### Core Capabilities
+
+- Multi-Agent Orchestration
+- Workforce Intelligence
+- Career Readiness Assessment
+- Candidate Discovery and Ranking
+- Personalized Learning Recommendations
+- Decision Support System
+- Skill Gap Analysis
+- Workforce Analytics Dashboard
+- AI-Powered Talent Development
+- Enterprise Learning Intelligence
+- Agent-Based Reasoning Workflow
+
+### Microsoft Agents League Alignment
+
+The project demonstrates reasoning through coordinated agent interactions, structured decision-making, and workflow orchestration. TalentMind AI showcases how specialized AI agents can collaborate to improve recruitment, employee development, and workforce readiness in enterprise environments.

@@ -6,13 +6,20 @@ def rank_candidates(job, candidates):
 
     for c in candidates:
 
-        match = 0
+        score = 0
 
         for skill in c["skills"]:
-            if skill.lower() in required:
-                match += 1
 
-        score = int((match / len(required)) * 100)
+            skill_lower = skill.lower()
+
+            if skill_lower in required:
+                score += 25
+
+            if skill_lower == "python":
+                score += 10
+
+            if skill_lower == "azure":
+                score += 10
 
         results.append({
             "name": c["name"],

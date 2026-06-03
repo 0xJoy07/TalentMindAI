@@ -1,0 +1,10 @@
+Learning Path Report
+
+Role:
+Cloud Engineer
+
+Recommended Certifications:
+
+AZ-204
+AZ-305
+Azure Fundamentals

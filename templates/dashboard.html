@@ -26,6 +26,41 @@
     </div>
 
 </div>
+<h2 style="text-align:center;margin-top:40px;">
+Workforce Analytics
+</h2>
 
+<div style="width:80%;margin:auto;">
+    <canvas id="myChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+const ctx = document.getElementById('myChart');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: [
+            'Readiness',
+            'Top Performers',
+            'At Risk'
+        ],
+
+        datasets: [{
+            label: 'Workforce Metrics',
+
+            data: [
+                82,
+                5,
+                2
+            ]
+        }]
+    }
+});
+
+</script>
 </body>
 </html>
