@@ -3,6 +3,7 @@ import json
 from agents.candidate_agent import rank_candidates
 from agents.learning_agent import get_learning_path
 from agents.assessment_agent import assess_readiness
+# Update the import path below if 'orchestrator.workflow_manager' is incorrect.
 from orchestrator.workflow_manager import generate_workforce_report
 
 app = Flask(__name__)
