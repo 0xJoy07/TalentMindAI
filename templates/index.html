@@ -1,9 +1,15 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+
     <title>TalentMind AI</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
 </head>
+
 <body>
 
 <div class="hero">
@@ -11,51 +17,73 @@
     <h1>TalentMind AI</h1>
 
     <p>
-        AI-Powered Workforce Intelligence &
-        Career Readiness Platform
+        AI-Powered Workforce Intelligence Platform
+    </p>
+
+    <p style="margin-top:15px;color:#cbd5e1;">
+        Multi-Agent System for Candidate Discovery,
+        Skill Gap Analysis, Learning Recommendations,
+        Readiness Assessment and Workforce Analytics.
     </p>
 
     <div class="hero-buttons">
-        <a href="/candidate">Get Started</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/workforce"
-class="service-card">
 
-<h3>
-Generate Workforce Report
-</h3>
+        <a href="/workforce">
+            Generate Workforce Report
+        </a>
 
-<p>
-End-to-End Agent Workflow
-</p>
+        <a href="/dashboard">
+            View Dashboard
+        </a>
 
-</a>
     </div>
 
 </div>
 
-<!-- REPLACES THE OLD MENU -->
-
 <div class="services">
 
     <a href="/candidate" class="service-card">
-        <h3>Candidate Discovery</h3>
-        <p>AI-powered hiring intelligence</p>
+
+        <h3>🔍 Candidate Discovery Agent</h3>
+
+        <p>
+            Match candidates with job requirements
+            using AI-powered ranking.
+        </p>
+
     </a>
 
     <a href="/learning" class="service-card">
-        <h3>Learning Agent</h3>
-        <p>Certification recommendations</p>
+
+        <h3>📚 Learning Agent</h3>
+
+        <p>
+            Generate personalized certification
+            and upskilling recommendations.
+        </p>
+
     </a>
 
     <a href="/assessment" class="service-card">
-        <h3>Assessment Agent</h3>
-        <p>Readiness evaluation</p>
+
+        <h3>📈 Assessment Agent</h3>
+
+        <p>
+            Evaluate readiness and identify
+            workforce strengths.
+        </p>
+
     </a>
 
     <a href="/dashboard" class="service-card">
-        <h3>Analytics Dashboard</h3>
-        <p>Manager insights</p>
+
+        <h3>📊 Insights Dashboard</h3>
+
+        <p>
+            Workforce analytics and manager
+            decision support.
+        </p>
+
     </a>
 
 </div>
@@ -63,22 +91,36 @@ End-to-End Agent Workflow
 <div class="stats">
 
     <div class="stat">
+
         <h2>500+</h2>
+
         <p>Candidates Evaluated</p>
+
     </div>
 
     <div class="stat">
+
         <h2>92%</h2>
-        <p>Match Accuracy</p>
+
+        <p>Matching Accuracy</p>
+
     </div>
 
     <div class="stat">
+
         <h2>150+</h2>
+
         <p>Learning Plans Generated</p>
+
     </div>
 
 </div>
 
-</body>
+<div class="footer">
 
+    TalentMind AI • Multi-Agent Workforce Intelligence Platform
+
+</div>
+
+</body>
 </html>
