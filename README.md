@@ -47,16 +47,7 @@
 ---
 
 ## 🏗️ System Architecture
-
-> *Architecture diagram coming soon — SVG will be placed here.*
-
-<!-- ARCHITECTURE SVG PLACEHOLDER -->
-<!-- Replace the comment below with your SVG file or image tag -->
-<!--
-<div align="center">
-  <img src="./assets/architecture.svg" alt="TalentMind AI Architecture" width="90%"/>
-</div>
--->
+<img alt="talentmind_ai_architecture_v2" width="90%" src="https://github.com/user-attachments/assets/f1865c47-3a61-44a5-b4dc-c6e07e979409" />
 
 ---
 
