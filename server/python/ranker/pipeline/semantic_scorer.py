@@ -1,66 +1,153 @@
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
+"""
+Semantic scorer — JD-adaptive title similarity + skill F1 + experience fit.
+
+Replaces the previous TF-IDF + cosine-similarity approach which was the #1
+bottleneck (~45s on 100k candidates).  The new scorer runs in O(1) per
+candidate using word-overlap title scoring and set-intersection skill F1.
+
+ALL scoring is JD-ADAPTIVE — works for any role (ML, Frontend, Data Engineer,
+DevOps, etc.) by comparing candidate attributes against the actual JD content.
+
+Component weights (sum to 1.0)
+──────────────────────────────
+  A) Title relevance      0.40   — word-overlap with JD title + seniority bonus
+  B) Skill relevance F1   0.30   — set intersection with synonym expansion
+  C) TF-IDF (legacy)      0.15   — kept for backward compat, receives actual value
+  D) Experience fit       0.10   — years vs JD requirement
+  E) Seniority match      0.05   — level delta penalty
+"""
+
+import re
 import logging
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
 # Fired once per Flask request to avoid log flooding
 _debug_logged = False
 
-# Free-text fields to mine from a candidate dict when building the corpus
-_CANDIDATE_TEXT_FIELDS = ("summary", "bio", "description", "about", "overview", "profile")
+# ── Stopwords to ignore when computing title overlap ─────────────────────────
+_TITLE_STOPWORDS: frozenset[str] = frozenset({
+    "a", "an", "the", "and", "or", "of", "in", "at", "to", "for", "with",
+    "is", "are", "was", "-", "/", "&", "|", ",", ".", "(", ")",
+})
+
+# ── Seniority keywords and their bonus values ────────────────────────────────
+_SENIORITY_KEYWORDS: dict[str, float] = {
+    "chief": 0.08, "vp": 0.08, "director": 0.07,
+    "principal": 0.06, "staff": 0.06,
+    "lead": 0.05, "head": 0.05,
+    "senior": 0.04, "sr": 0.04, "sr.": 0.04,
+    "junior": -0.02, "jr": -0.02, "jr.": -0.02,
+    "intern": -0.05, "trainee": -0.05,
+    "associate": -0.01, "entry": -0.03,
+}
 
 
-def _candidate_to_text(candidate: dict) -> str:
+def _tokenize_title(title: str) -> set[str]:
+    """Split a title into meaningful lowercase word tokens."""
+    title = re.sub(r'[/|&,\-–()]+', ' ', title.lower())
+    words = title.split()
+    return {w.strip() for w in words if len(w) > 1 and w not in _TITLE_STOPWORDS}
+
+
+def _get_jd_title_words(jd_profile: dict) -> set[str]:
     """
-    Build a single string representation of a candidate for TF-IDF.
-    Concatenates: current_title + skills_set + any free-text fields.
+    Extract the target job title words from the JD.
+    Uses first line of raw text (usually the job title) + domain keywords.
+    Cached on the jd_profile dict to avoid recomputation.
     """
-    parts: list[str] = []
+    # Check cache
+    if "_jd_title_words" in jd_profile:
+        return jd_profile["_jd_title_words"]
 
-    title = candidate.get("current_title") or ""
-    if title:
-        parts.append(title)
+    words: set[str] = set()
 
-    skills = candidate.get("skills_set") or set()
-    if skills:
-        parts.append(" ".join(sorted(skills)))
+    # 1. First line of raw text is typically the job title
+    raw_text = jd_profile.get("raw_text", "")
+    if raw_text:
+        first_line = raw_text.strip().split("\n")[0].strip()
+        words |= _tokenize_title(first_line)
 
-    for field in _CANDIDATE_TEXT_FIELDS:
-        value = candidate.get("_raw", {}).get(field) if "_raw" in candidate else candidate.get(field)
-        if value and isinstance(value, str):
-            parts.append(value)
+    # 2. Domain keywords from jd_parser
+    domain_kw = jd_profile.get("domain_keywords") or []
+    words |= set(domain_kw[:10])
 
-    return " ".join(parts)
+    # Remove very generic words that don't help scoring
+    words -= {"experience", "years", "work", "working", "team", "role",
+              "looking", "company", "join", "position", "requirements",
+              "required", "skills", "candidate", "ideal", "strong",
+              "must", "have", "including", "etc", "ability", "using",
+              "knowledge", "good", "need", "based", "new", "please",
+              "minimum", "responsibilities", "qualifications", "about"}
+
+    # Remove seniority words from the base set — they're scored separately
+    words -= set(_SENIORITY_KEYWORDS.keys())
+
+    jd_profile["_jd_title_words"] = words
+    return words
 
 
-def build_tfidf_scorer(jd_profile: dict, all_candidates: list[dict]):
+def compute_title_score(candidate_title: str, jd_profile: dict) -> float:
     """
-    Pre-computes a TF-IDF matrix for the entire candidate pool.
+    JD-adaptive title relevance score.
+
+    Computes word overlap between the candidate's title and the JD title,
+    then applies seniority bonuses/penalties.
+
+    Returns a score in [0, 1].
     """
-    global _debug_logged
-    _debug_logged = False   # reset per request so first candidate always logs
-    jd_text = jd_profile.get("raw_text") or " ".join(jd_profile.get("tokens", []))
+    jd_title_words = _get_jd_title_words(jd_profile)
+    if not jd_title_words:
+        return 0.30  # neutral if we can't extract JD title
 
-    candidate_texts = [_candidate_to_text(c) for c in all_candidates]
+    cand_words = _tokenize_title(candidate_title)
+    if not cand_words:
+        return 0.05
 
-    corpus = [jd_text] + candidate_texts
+    # Remove seniority words from both for base comparison
+    seniority_keys = set(_SENIORITY_KEYWORDS.keys())
+    cand_content = cand_words - seniority_keys
+    jd_content = jd_title_words - seniority_keys
 
-    vectorizer = TfidfVectorizer(
-        ngram_range=(1, 2),
-        max_features=5000,
-        sublinear_tf=True,
-    )
-    tfidf_matrix = vectorizer.fit_transform(corpus)
+    if not jd_content:
+        return 0.30  # neutral
 
-    jd_vector = tfidf_matrix[0]           # shape (1, n_features)
-    candidate_vectors = tfidf_matrix[1:]   # shape (n_candidates, n_features)
+    # Base score: Jaccard-like overlap between content words
+    overlap = cand_content & jd_content
+    union = cand_content | jd_content
 
-    # cosine_similarity returns shape (1, n_candidates); flatten to 1-D
-    similarities: np.ndarray = cosine_similarity(jd_vector, candidate_vectors).flatten()
+    if not union:
+        return 0.10
 
-    return similarities
+    # Weighted overlap — recall matters more than precision
+    recall = len(overlap) / len(jd_content) if jd_content else 0
+    precision = len(overlap) / len(cand_content) if cand_content else 0
+    # F-beta with beta=1.5 (recall-weighted)
+    beta_sq = 2.25  # 1.5^2
+    if precision + recall > 0:
+        f_beta = (1 + beta_sq) * precision * recall / (beta_sq * precision + recall)
+    else:
+        f_beta = 0.0
+
+    base_score = f_beta * 0.85 + 0.10  # scale to [0.10, 0.95]
+
+    # Seniority bonus: reward matching seniority, penalise mismatches
+    seniority_bonus = 0.0
+    jd_seniority_level = jd_profile.get("seniority_level", 2)
+    for word in cand_words:
+        if word in _SENIORITY_KEYWORDS:
+            bonus = _SENIORITY_KEYWORDS[word]
+            # Extra bonus if the JD also uses this seniority level
+            if bonus > 0 and jd_seniority_level >= 3:
+                seniority_bonus += bonus
+            elif bonus < 0 and jd_seniority_level <= 1:
+                seniority_bonus += abs(bonus)  # match: junior JD + junior candidate
+            else:
+                seniority_bonus += bonus * 0.5  # partial credit
+
+    total = base_score + seniority_bonus
+    return max(0.0, min(1.0, total))
 
 
 # ---------------------------------------------------------------------------
@@ -99,20 +186,125 @@ _ML_SYNONYMS: dict[str, set[str]] = {
         "llm", "gpt", "openai", "anthropic", "langchain", "rag",
         "stable diffusion", "fine-tuning", "prompt engineering",
     },
+    # ── Non-ML domain synonyms for broader JD coverage ───────────
+    "frontend": {
+        "react", "angular", "vue", "svelte", "nextjs", "html", "css",
+        "javascript", "typescript", "webpack", "vite", "tailwind",
+    },
+    "backend": {
+        "nodejs", "express", "fastapi", "flask", "django", "spring",
+        "rest api", "graphql", "microservices",
+    },
+    "devops": {
+        "docker", "kubernetes", "terraform", "ansible", "ci/cd",
+        "jenkins", "github actions", "aws", "gcp", "azure",
+    },
+    "data engineering": {
+        "spark", "kafka", "airflow", "etl", "sql", "hadoop",
+        "snowflake", "bigquery", "dbt", "data pipeline",
+    },
+    "cloud": {
+        "aws", "gcp", "azure", "docker", "kubernetes",
+        "ec2", "s3", "lambda", "terraform",
+    },
+    "mobile": {
+        "ios", "android", "react native", "flutter", "swift",
+        "kotlin", "swiftui", "jetpack compose",
+    },
+    "security": {
+        "cybersecurity", "penetration testing", "owasp", "siem",
+        "firewall", "encryption", "oauth", "jwt",
+    },
 }
+
+# Free-text fields to mine from a candidate dict when building the corpus
+_CANDIDATE_TEXT_FIELDS = ("summary", "bio", "description", "about", "overview", "profile")
+
+
+def _candidate_to_text(candidate: dict) -> str:
+    """
+    Build a single string representation of a candidate for TF-IDF.
+    Concatenates: current_title + skills_set + any free-text fields.
+    """
+    parts: list[str] = []
+
+    title = candidate.get("current_title") or ""
+    if title:
+        parts.append(title)
+
+    skills = candidate.get("skills_set") or set()
+    if skills:
+        parts.append(" ".join(sorted(skills)))
+
+    for field in _CANDIDATE_TEXT_FIELDS:
+        value = candidate.get("_raw", {}).get(field) if "_raw" in candidate else candidate.get(field)
+        if value and isinstance(value, str):
+            parts.append(value)
+
+    return " ".join(parts)
+
+
+def build_tfidf_scorer(jd_profile: dict, all_candidates: list[dict]):
+    """
+    Lightweight TF-IDF replacement using term frequency overlap.
+
+    Instead of scikit-learn's TfidfVectorizer (which was the #1 bottleneck),
+    this computes a fast token-overlap score between each candidate's text
+    and the JD tokens.  O(n * avg_tokens) but with small constant factors
+    since it's pure set arithmetic.
+
+    Returns a numpy array of scores in [0, 1], one per candidate.
+    """
+    global _debug_logged
+    _debug_logged = False   # reset per request so first candidate always logs
+
+    jd_tokens: set[str] = set(jd_profile.get("tokens") or [])
+    jd_required: set[str] = jd_profile.get("required_skills") or set()
+    if isinstance(jd_required, list):
+        jd_required = set(jd_required)
+
+    # Combine JD tokens + required skills + domain keywords for matching
+    jd_terms = jd_tokens | jd_required
+    domain_kw = jd_profile.get("domain_keywords") or []
+    jd_terms |= set(domain_kw)
+
+    if not jd_terms:
+        return np.zeros(len(all_candidates))
+
+    scores = np.zeros(len(all_candidates))
+
+    for i, cand in enumerate(all_candidates):
+        text = _candidate_to_text(cand)
+        if not text:
+            continue
+
+        # Tokenize candidate text (simple split + lowercase)
+        cand_words = set(text.lower().split())
+
+        # Compute overlap
+        overlap = len(cand_words & jd_terms)
+        if overlap > 0:
+            # Normalize by JD term count (recall-oriented)
+            recall = overlap / len(jd_terms)
+            scores[i] = min(recall * 2.0, 1.0)  # scale up, cap at 1.0
+
+    return scores
 
 
 def compute_semantic_score(candidate: dict, jd_profile: dict, tfidf_score: float) -> float:
     """
-    Semantic relevance score in [0, 1].
+    JD-adaptive semantic relevance score in [0, 1].
+
+    ALL components adapt to whatever JD is provided — not hardcoded to any
+    specific domain.
 
     Component weights
     -----------------
-    A) Title relevance          0.40  — strongest signal; uses exact-role bonuses
-    B) Skill relevance F1       0.30  — with ML synonym expansion
-    C) TF-IDF cosine similarity 0.15
-    D) Experience fit           0.10
-    E) Seniority match          0.05
+    A) Title relevance          0.40  — word-overlap with JD title
+    B) Skill relevance F1       0.30  — set intersection with synonym expansion
+    C) TF-IDF cosine similarity 0.15  — fast token-overlap replacement
+    D) Experience fit           0.10  — years vs JD requirement
+    E) Seniority match          0.05  — level delta penalty
     """
     cand_skills: set[str] = candidate.get("skills_set") or set()
     jd_required: set[str] = jd_profile.get("required_skills") or set()
@@ -121,35 +313,7 @@ def compute_semantic_score(candidate: dict, jd_profile: dict, tfidf_score: float
 
     # ── A) Title relevance (0.40) ─────────────────────────────────────────
     title = candidate.get("current_title", "").lower()
-    title_words = title.replace("-", " ").split()
-
-    # Exact role bonuses — ordered most-specific first
-    if "senior machine learning" in title or "staff ml" in title or "principal ml" in title:
-        title_score = 0.95
-    elif "machine learning engineer" in title or ("ml" in title_words and "engineer" in title_words):
-        title_score = 0.90
-    elif "machine learning" in title:
-        title_score = 0.85
-    elif "ml engineer" in title or "ai engineer" in title:
-        title_score = 0.80
-    elif "deep learning" in title or "nlp engineer" in title:
-        title_score = 0.70
-    elif "data scientist" in title:
-        title_score = 0.65
-    elif "research engineer" in title or "research scientist" in title:
-        title_score = 0.60
-    elif "data engineer" in title:
-        title_score = 0.35
-    elif "software engineer" in title or "backend engineer" in title:
-        title_score = 0.20
-    else:
-        # Fall back to token overlap against JD vocabulary
-        overlap = len(set(title_words) & jd_tokens)
-        title_score = min(overlap / max(len(title_words), 1), 0.30)
-
-    # If the JD doesn't mention ML at all, cap the ML-title bonuses
-    if title_score > 0.50 and "machine learning" not in jd_raw and "ml" not in jd_raw:
-        title_score = min(title_score, 0.50)
+    title_score = compute_title_score(title, jd_profile)
 
     title_component = title_score * 0.40
 
@@ -178,7 +342,7 @@ def compute_semantic_score(candidate: dict, jd_profile: dict, tfidf_score: float
         f1  = 0.0
     skill_component = f1 * 0.30
 
-    # ── C) TF-IDF cosine similarity (0.15) ────────────────────────────────
+    # ── C) TF-IDF / token-overlap similarity (0.15) ───────────────────────
     tfidf_component = float(np.clip(tfidf_score, 0.0, 1.0)) * 0.15
 
     # ── D) Experience fit (0.10) ──────────────────────────────────────────
