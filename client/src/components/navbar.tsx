@@ -1,8 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -27,7 +28,7 @@ export function Navbar() {
             <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-2 group">
                     <div className="h-8 w-8 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <BrainCircuit className="h-6 w-6 text-indigo-500 drop-shadow-[0_0_10px_rgba(99,102,241,0.8)]" />
+                        <Image src="/logo.png" alt="TalentMind Logo" width={32} height={32} className="rounded-full" />
                     </div>
                     <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-rose-300">
                         Talent-Mind
@@ -39,14 +40,11 @@ export function Navbar() {
                         Features
                         <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-indigo-400 transition-all duration-300 group-hover:w-full"></span>
                     </Link>
-                    <Link href="/features" className="relative hover:text-white transition-colors group">
+                    <Link href="/how-it-works" className="relative hover:text-white transition-colors group">
                         How it Works
                         <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-indigo-400 transition-all duration-300 group-hover:w-full"></span>
                     </Link>
-                    <Link href="/testimonials" className="relative hover:text-white transition-colors group">
-                        Testimonials & Demo
-                        <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-indigo-400 transition-all duration-300 group-hover:w-full"></span>
-                    </Link>
+
                     <Link href="/pricing" className="relative hover:text-white transition-colors group">
                         Pricing
                         <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-indigo-400 transition-all duration-300 group-hover:w-full"></span>
@@ -54,7 +52,7 @@ export function Navbar() {
                     {isLoggedIn && (
                         <>
                             <Link href="/dashboard" className="relative hover:text-white transition-colors group">
-                                Rank-Maker
+                                Talent Ranker
                                 <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-indigo-400 transition-all duration-300 group-hover:w-full"></span>
                             </Link>
                             <Link href="/profile" className="relative hover:text-white transition-colors group">

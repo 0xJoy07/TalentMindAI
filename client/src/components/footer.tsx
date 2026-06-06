@@ -13,27 +13,25 @@ export function Footer() {
                     </p>
                 </div>
                 
-                <div className="flex items-center gap-6">
-                    <a href="#" className="text-white/40 hover:text-indigo-300 transition-colors">
-                        <Globe className="h-5 w-5" />
-                        <span className="sr-only">Website</span>
+                <div className="flex items-center gap-6 text-sm text-white/50">
+                    <span>Developers:</span>
+                    <a href="https://github.com/Joy-S-07" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-300 transition-colors">
+                        Joy
                     </a>
-                    <a href="#" className="text-white/40 hover:text-indigo-300 transition-colors">
-                        <MessageSquare className="h-5 w-5" />
-                        <span className="sr-only">Contact</span>
+                    <a href="https://github.com/SnehaBanik" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-300 transition-colors">
+                        Sneha
                     </a>
-                    <a href="#" className="text-white/40 hover:text-indigo-300 transition-colors">
-                        <User className="h-5 w-5" />
-                        <span className="sr-only">Profile</span>
+                    <a href="https://github.com/jiyabhowmick-collab" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-300 transition-colors">
+                        Jiya
                     </a>
                 </div>
             </div>
             
             <div className="max-w-6xl mx-auto mt-12 pt-8 border-t border-white/[0.02] flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/30 font-light">
-                <p>© {new Date().getFullYear()} hack2skill POC. All rights reserved.</p>
+                <p>© {new Date().getFullYear()} TalentMindAI POC. All rights reserved.</p>
                 <div className="flex gap-4">
-                    <a href="#" className="hover:text-white/60 transition-colors">Privacy Policy</a>
-                    <a href="#" className="hover:text-white/60 transition-colors">Terms of Service</a>
+                    <a href="#" className="hover:text-white/60 transition-colors">Choose Skill</a>
+                    <a href="#" className="hover:text-white/60 transition-colors">Choose Perfect</a>
                 </div>
             </div>
         </footer>
