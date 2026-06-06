@@ -9,17 +9,31 @@ import { useRouter } from "next/navigation";
 
 export function Navbar() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [user, setUser] = useState<{ avatar?: string; name?: string } | null>(null);
     const router = useRouter();
 
     useEffect(() => {
-        // Simple check for token
         const token = localStorage.getItem("token");
-        setIsLoggedIn(!!token);
+        if (token) {
+            setIsLoggedIn(true);
+            // Fetch profile for avatar
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/profile`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    setUser(data.user);
+                }
+            })
+            .catch(console.error);
+        }
     }, []);
 
     const handleLogout = () => {
         localStorage.removeItem("token");
         setIsLoggedIn(false);
+        setUser(null);
         router.push("/login");
     };
 
@@ -79,8 +93,16 @@ export function Navbar() {
                         </>
                     ) : (
                         <>
-                            <Link href="/profile" className="hidden sm:flex items-center justify-center h-9 w-9 rounded-full bg-white/[0.05] border border-white/[0.1] hover:bg-white/[0.1] transition-colors">
-                                <User className="h-4 w-4 text-white/70" />
+                            <Link href="/profile" className="hidden sm:flex items-center justify-center h-9 w-9 rounded-full bg-white/[0.05] border border-white/[0.1] hover:bg-white/[0.1] transition-colors overflow-hidden">
+                                {user?.avatar ? (
+                                    <img src={user.avatar} alt="Avatar" className="h-full w-full object-cover" />
+                                ) : user?.name ? (
+                                    <span className="text-xs font-medium text-white/70">
+                                        {user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                                    </span>
+                                ) : (
+                                    <User className="h-4 w-4 text-white/70" />
+                                )}
                             </Link>
                             <Button 
                                 onClick={handleLogout}

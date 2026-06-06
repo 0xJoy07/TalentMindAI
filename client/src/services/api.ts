@@ -109,7 +109,14 @@ export async function getMe(): Promise<{ user: AuthUser }> {
 /* ------------------------------------------------------------------ */
 
 async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const opts: RequestInit = { ...options, credentials: "include" };
+  // Inject the Bearer token from localStorage into every request
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const headers = new Headers(options.headers as HeadersInit | undefined);
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const opts: RequestInit = { ...options, headers, credentials: "include" };
   let res = await fetch(url, opts);
   if (res.status === 401) {
     try {
@@ -258,6 +265,35 @@ export async function exportCSV(jobId: string, tier: 10 | 50 | 100): Promise<voi
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Ranking History                                                    */
+/* ------------------------------------------------------------------ */
+
+export interface RankingHistoryEntry {
+  _id: string;
+  jobId: string;
+  jobTitle: string;
+  jobDescriptionSnippet: string;
+  totalCandidates: number;
+  returnedCandidates: number;
+  fileName: string;
+  createdAt: string;
+}
+
+export async function fetchRankingHistory(): Promise<RankingHistoryEntry[]> {
+  const res = await authFetch(`${API_BASE}/api/history`);
+  if (!res.ok) throw new Error("Failed to fetch ranking history");
+  const data = await res.json();
+  return data.history ?? [];
+}
+
+export async function deleteRankingHistory(id: string): Promise<void> {
+  const res = await authFetch(`${API_BASE}/api/history/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete entry");
 }
 
 /* ------------------------------------------------------------------ */

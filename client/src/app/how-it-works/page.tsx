@@ -123,7 +123,7 @@ export default function HowItWorksPage() {
                 Pipeline Architecture
               </h2>
               <p className="text-white/50 text-lg">
-                The 3-phase, highly optimized flow achieving ~11s processing times for 100k+ candidates.
+                The 3-phase, highly optimized flow
               </p>
             </div>
 

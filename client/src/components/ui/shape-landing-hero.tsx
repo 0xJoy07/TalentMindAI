@@ -260,7 +260,7 @@ function HeroGeometric({
                             </svg>
                         </HoverButton>
                         <a
-                            href="/features"
+                            href="/how-it-works"
                             className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl border border-white/10 bg-white/[0.03] text-white/70 hover:text-white hover:border-indigo-500/40 hover:bg-white/[0.06] font-medium text-sm transition-all duration-300 hover:scale-105"
                         >
                             See How It Works
