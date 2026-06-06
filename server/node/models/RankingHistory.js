@@ -42,7 +42,7 @@ const rankingHistorySchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    // ── Stored CSV data (plain text) ───────────────────────────────
+    // Raw CSV data strings stored directly in the database
     csvTop10: {
       type: String,
       default: "",

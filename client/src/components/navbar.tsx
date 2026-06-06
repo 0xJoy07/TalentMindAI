@@ -17,7 +17,7 @@ export function Navbar() {
         if (token) {
             setIsLoggedIn(true);
             // Fetch profile for avatar
-            fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/profile`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
             .then(res => res.json())

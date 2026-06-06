@@ -19,30 +19,30 @@ const profileRoutes = require("./routes/profile.routes");
 const historyRoutes = require("./routes/history.routes");
 const { verifyMailer } = require("./utils/mailer.util");
 
-// ── Connect to MongoDB ──────────────────────────────────────────────
+// Establish connection to the MongoDB database
 connectDB();
 
-// ── Verify mailer on startup ─────────────────────────────────────────
+// Check if the email service configuration is valid before starting up
 verifyMailer();
 
-// ── App ─────────────────────────────────────────────────────────────
+// Initialize the Express application
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// ── Middleware ───────────────────────────────────────────────────────
+// Setup global middleware (CORS, body parsing, cookies)
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+  origin: process.env.CORS_ORIGIN,
   credentials: true,
 }));
 app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 
-// ── Routes ──────────────────────────────────────────────────────────
+// Register core API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/history", historyRoutes);
 
-// ── Ranking proxy ───────────────────────────────────────────────────
+// Setup proxy handlers to communicate with the Python Flask ranking engine
 const multer  = require("multer");
 const axios   = require("axios");
 const FormData = require("form-data");
@@ -54,9 +54,9 @@ const upload = multer({
   limits: { fileSize: 600 * 1024 * 1024 }, // 600 MB
 });
 
-const PYTHON_URL = process.env.PYTHON_URL || "http://localhost:5000";
+const PYTHON_URL = process.env.PYTHON_URL;
 
-// Upload candidates + JD → trigger ranking
+// Handle the candidate CSV upload and kick off the AI ranking pipeline in Flask
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -80,7 +80,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     });
     console.log(`[upload] Flask responded: job_id=${response.data.job_id} returned=${response.data.returned}`);
 
-    // ── Auto-save to ranking history + fetch & store CSVs ────────
+    // Automatically fetch and save the resulting CSVs to the user's MongoDB profile
     try {
       let userId = null;
       const authHeader = req.headers.authorization;
@@ -218,7 +218,7 @@ app.get("/api/export/:jobId/:tier", async (req, res) => {
   }
 });
 
-// ── Health check ────────────────────────────────────────────────────
+// Basic health check endpoint
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
@@ -227,13 +227,13 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-// ── Global error handler ────────────────────────────────────────────
+// Catch-all global error handler
 app.use((err, _req, res, _next) => {
   console.error("[server] Unhandled error:", err.message);
   res.status(500).json({ success: false, error: err.message });
 });
 
-// ── Start ───────────────────────────────────────────────────────────
+// Start listening for incoming requests
 app.listen(PORT, () => {
-  console.log(`[server] TalentMind server listening on http://localhost:${PORT}`);
+  console.log(`[server] TalentMind server listening on port ${PORT}`);
 });
